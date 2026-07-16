@@ -37,8 +37,10 @@ jobs:
         shell: bash
         run: |
           rsync -a --delete \
-            --exclude '.git/' \
+            --exclude '.git' \
             --exclude '.github/workflows/sync-upstream.yml' \
+            --exclude '.github/workflows/docker-publish.yml' \
+            --exclude '.github/workflows/dockerhub-description.yml' \
             upstream/ downstream/
 
           cd downstream
