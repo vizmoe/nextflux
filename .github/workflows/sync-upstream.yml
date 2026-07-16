@@ -1,0 +1,57 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out downstream
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          path: downstream
+          fetch-depth: 0
+
+      - name: Check out upstream
+        uses: actions/checkout@v7
+        with:
+          repository: electh/nextflux
+          ref: main
+          path: upstream
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Synchronize upstream files
+        shell: bash
+        run: |
+          rsync -a --delete \
+            --exclude '.git/' \
+            --exclude '.github/workflows/sync-upstream.yml' \
+            upstream/ downstream/
+
+          cd downstream
+          git add --all
+
+          if git diff --cached --quiet; then
+            echo "Already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          upstream_sha="$(git -C ../upstream rev-parse HEAD)"
+          git commit -m "chore: sync upstream ${upstream_sha:0:7}"
+          git push origin HEAD:main
